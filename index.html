@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Repo Card Maker</title>
+
+  <link rel="icon" href="assets/favicon/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="https://use.typekit.net/tne4lpa.css">
+  <link rel="stylesheet" href="css/main.css">
+
+  <script src="https://cdn.jsdelivr.net/npm/stackblur-canvas@2.7.0/dist/stackblur.min.js"></script>
+  <script defer src="js/export.js"></script>
+  <script defer src="js/main.js"></script>
+</head>
+
+<body>
+  <header>
+    <h1 class="header-title">
+      Repo Card Maker
+    </h1>
+    <button id="dl-btn" type="button">
+      <img src="assets/img/btn_dl.svg" alt="Download Icon" draggable="false">
+      Export Preview
+    </button>
+  </header>
+
+  <main>
+    <div class="input-section">
+      <div class="input-group" title="GitHub Repo URL or owner/repo">
+        <label for="input-github-url">
+          <img src="assets/img/input_txt.svg" alt="GitHub Icon" draggable="false">
+        </label>
+        <div class="fetch-group">
+          <input id="input-github-url" type="text" placeholder="owner/repo or https://github.com/owner/repo">
+          <button id="fetch-btn" type="button">Fetch Details</button>
+        </div>
+      </div>
+
+      <div class="input-group" title="Repo Name">
+        <label for="input-repo-name">
+          <img src="assets/img/input_txt.svg" alt="Name Icon" draggable="false">
+        </label>
+        <input id="input-repo-name" type="text" placeholder="Repository Name">
+      </div>
+
+      <div class="input-group" title="Repo Description">
+        <label for="input-repo-desc">
+          <img src="assets/img/input_txt.svg" alt="Description Icon" draggable="false">
+        </label>
+        <textarea id="input-repo-desc" rows="2" placeholder="Short Repository Description"></textarea>
+      </div>
+
+      <div class="input-group" title="Repo Icon (PNG/SVG)">
+        <label for="input-repo-icon">
+          <img src="assets/img/input_img.svg" alt="Icon" draggable="false">
+        </label>
+        <div class="icon-input-group">
+          <input id="input-repo-icon" type="file" accept="image/*">
+        </div>
+      </div>
+
+      <div class="checkbox-row">
+        <label class="checkbox-label">
+          <input id="input-tint-icon" type="checkbox">
+          Tint icon with accent
+        </label>
+        <label class="checkbox-label">
+          <input id="input-prominent-icon" type="checkbox">
+          Prominent icon layout
+        </label>
+      </div>
+
+      <div class="input-group" title="Accent Color (Glow)">
+        <label for="input-accent-color">
+          <img src="assets/img/input_card_tint.svg" alt="Accent Icon" draggable="false">
+        </label>
+        <input id="input-accent-color" type="color" value="#EF4444">
+      </div>
+    </div>
+
+    <div class="preview-container">
+      <div id="banner-preview">
+        <div id="preview-too-small-txt">
+          <p>The preview is too small to display the card.</p>
+          <p>Please view it on a larger screen.</p>
+        </div>
+
+        <div id="preview-card" class="card-glow">
+          <h2 id="preview-repo-name">Repo Name</h2>
+          <div id="preview-repo-icon-container">
+            <div id="preview-repo-icon"></div>
+          </div>
+          <p id="preview-repo-desc">Repo Description goes here.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+</body>
+
+</html>
