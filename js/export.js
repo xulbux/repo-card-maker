@@ -167,7 +167,7 @@ async function _exportRepoCard(
     const nameLineHeight = nameFontSize * 1.1;
     const nameMaxLines = 2;
 
-    const descFontSize = 30;
+    const descFontSize = 34;
     const descLineHeight = descFontSize * 1.5;
     const descMaxLines = 3;
 
