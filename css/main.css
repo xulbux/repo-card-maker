@@ -1,15 +1,15 @@
 :root {
   --app-font: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
 
-  --red-50:#fef2f2; --red-100:#fee2e2; --red-200:#fecaca; --red-300:#fca5a5; --red-400:#f87171; --red-500:#ef4444; --red-600:#dc2626; --red-700:#b91c1c; --red-800:#991b1b; --red-900:#7f1d1d; --red-950:#450a0a;
+  --indigo-50:#eef2ff; --indigo-100:#e0e7ff; --indigo-200:#c6d2ff; --indigo-300:#a3b3ff; --indigo-400:#7c86ff; --indigo-500:#615fff; --indigo-600:#4f39f6; --indigo-700:#432dd7; --indigo-800:#372aac; --indigo-900:#312c85; --indigo-950:#1e1a4d;
   --gray-50:#fafafa; --gray-100:#f5f5f5; --gray-200:#e5e5e5; --gray-300:#d4d4d4; --gray-400:#a3a3a3; --gray-500:#737373; --gray-600:#525252; --gray-700:#404040; --gray-800:#262626; --gray-900:#171717; --gray-950:#0a0a0a;
 
-  --color-accent: var(--red-500);
+  --color-accent: var(--indigo-500);
 
-  --border-1-color: color-mix(in srgb, var(--red-500) 40%, transparent);
+  --border-1-color: color-mix(in srgb, var(--indigo-500) 40%, transparent);
   --border-2-color: color-mix(in srgb, var(--gray-500) 60%, transparent);
-  --btn-1-bg-color: color-mix(in srgb, var(--red-500) 60%, transparent);
-  --btn-1-bg-hover-color: color-mix(in srgb, var(--red-500) 70%, transparent);
+  --btn-1-bg-color: color-mix(in srgb, var(--indigo-500) 60%, transparent);
+  --btn-1-bg-hover-color: color-mix(in srgb, var(--indigo-500) 70%, transparent);
   --btn-2-bg-color: color-mix(in srgb, var(--gray-700) 60%, transparent);
   --btn-2-bg-hover-color: color-mix(in srgb, var(--gray-700) 70%, transparent);
 }
@@ -116,7 +116,7 @@ textarea {
 input::placeholder, textarea::placeholder { color: var(--gray-500) }
 input:focus, textarea:focus {
   outline: none;
-  box-shadow: 0 0 0 1.5px var(--red-500);
+  box-shadow: 0 0 0 1.5px var(--indigo-500);
 }
 
 
