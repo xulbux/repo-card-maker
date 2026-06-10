@@ -5,20 +5,48 @@
  * @param {string} repoName - repository name
  * @param {string} repoDesc - repository description
  * @param {boolean} shouldTintIcon - whether to tint the icon with the accent color
- * @param {boolean} isProminent - whether to use the prominent icon layout
+ * @param {string} [fileSlug] - slug to use for the downloaded filename
  */
-async function exportBanner(accentColor, repoIconData, repoName, repoDesc, shouldTintIcon, isProminent) {
+async function exportRepoCard(
+  accentColor,
+  repoIconData,
+  repoName,
+  repoDesc,
+  shouldTintIcon,
+  fileSlug,
+) {
+  // Ensure Lexend is loaded before drawing
+  await document.fonts.load('700 1px "Lexend"');
+  await document.fonts.load('300 1px "Lexend"');
+  return _exportRepoCard(
+    accentColor,
+    repoIconData,
+    repoName,
+    repoDesc,
+    shouldTintIcon,
+    fileSlug,
+  );
+}
+
+async function _exportRepoCard(
+  accentColor,
+  repoIconData,
+  repoName,
+  repoDesc,
+  shouldTintIcon,
+  fileSlug,
+) {
   try {
     const targetWidth = 1280;
     const targetHeight = 640;
 
-    // CREATE CANVAS
+    // Create canvas
     const canvas = document.createElement('canvas');
     canvas.width = targetWidth;
     canvas.height = targetHeight;
     const ctx = canvas.getContext('2d');
 
-    // HELPER: HEX TO RGBA
+    // Helper: HEX to RGBA
     const hexToRgba = (hex, alpha) => {
       const r = parseInt(hex.slice(1, 3), 16);
       const g = parseInt(hex.slice(3, 5), 16);
@@ -26,86 +54,159 @@ async function exportBanner(accentColor, repoIconData, repoName, repoDesc, shoul
       return `rgba(${r}, ${g}, ${b}, ${alpha})`;
     };
 
-    // 1. DRAW FIXED DARK BACKGROUND
+    // Helper: split text into wrapped lines (without drawing), returns line array
+    const splitLines = (context, text, maxWidth, maxLines) => {
+      const words = text.split(' ');
+      let line = '';
+      const lines = [];
+
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        if (context.measureText(testLine).width > maxWidth && n > 0) {
+          lines.push(line.trimEnd());
+          line = words[n] + ' ';
+        } else {
+          line = testLine;
+        }
+      }
+      lines.push(line.trimEnd());
+
+      const displayLines = lines.slice(0, maxLines);
+      if (lines.length > maxLines) {
+        let last = displayLines[maxLines - 1];
+        while (context.measureText(last + '…').width > maxWidth && last.length > 0) {
+          last = last.slice(0, -1);
+        }
+        displayLines[maxLines - 1] = last + '…';
+      }
+
+      return displayLines;
+    };
+
+    // Helper: wrap and truncate text, returns number of lines drawn
+    const wrapAndTruncate = (context, text, x, y, maxWidth, lineHeight, maxLines) => {
+      const displayLines = splitLines(context, text, maxWidth, maxLines);
+
+      for (let k = 0; k < displayLines.length; k++) {
+        context.fillText(displayLines[k], x, y + k * lineHeight);
+      }
+
+      return displayLines.length;
+    };
+
+    // [1] DRAW FIXED DARK BACKGROUND
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, targetWidth, targetHeight);
 
-    // 2. DRAW GLOW EFFECT
-    const centerX = targetWidth / 2;
-    const centerY = targetHeight / 2;
-    
-    // Safety margin calculations:
-    // top: 12.5% of 640 = 80px
-    // left: 6.25% of 1280 = 80px
-    const cardX = 80;
-    const cardY = 80;
-    const cardWidth = targetWidth - (cardX * 2);
-    const cardHeight = targetHeight - (cardY * 2);
-    
-    const glowPadding = 160;
-    const glowWidth = cardWidth + glowPadding * 2;
-    const glowHeight = cardHeight + glowPadding * 2;
-    
+    // Card bounds; mirrors CSS: top/bottom 12.5%, left/right 6.25%
+    const cardX = Math.round(targetWidth * 0.0625);   // 80px
+    const cardY = Math.round(targetHeight * 0.125);   // 80px
+    const cardWidth = targetWidth - cardX * 2;        // 1120px
+    const cardHeight = targetHeight - cardY * 2;      // 480px
+    const cardRadius = 36;
+    const innerPadding = 60;
+
+    // [2] Draw glow effect
+    const glowPadding = 80; // inset: -40px scaled up 2x for 1280 canvas
+    const glowW = targetWidth + glowPadding * 2;
+    const glowH = targetHeight + glowPadding * 2;
+
     const glowCanvas = document.createElement('canvas');
-    glowCanvas.width = glowWidth;
-    glowCanvas.height = glowHeight;
+    glowCanvas.width = glowW;
+    glowCanvas.height = glowH;
     const gCtx = glowCanvas.getContext('2d');
-    
-    gCtx.save();
-    gCtx.translate(glowWidth / 2, glowHeight / 2);
-    gCtx.scale(1.2, 0.7); 
-    const gGrad = gCtx.createRadialGradient(0, 0, 0, 0, 0, glowWidth / 2.2);
-    gGrad.addColorStop(0, hexToRgba(accentColor, 0.35));
+
+    const gGrad = gCtx.createRadialGradient(glowW / 2, glowH / 2, 0, glowW / 2, glowH / 2, glowW / 2);
+    gGrad.addColorStop(0,    hexToRgba(accentColor, 0.35));
     gGrad.addColorStop(0.55, hexToRgba(accentColor, 0.15));
-    gGrad.addColorStop(0.8, 'transparent');
+    gGrad.addColorStop(0.8,  'rgba(0,0,0,0)');
     gCtx.fillStyle = gGrad;
-    gCtx.fillRect(-glowWidth/2, -glowHeight/2, glowWidth, glowHeight);
-    gCtx.restore();
-    
+    gCtx.fillRect(0, 0, glowW, glowH);
+
     if (typeof StackBlur !== 'undefined') {
-      StackBlur.canvasRGB(glowCanvas, 0, 0, glowWidth, glowHeight, 48);
+      StackBlur.canvasRGB(glowCanvas, 0, 0, glowW, glowH, 96);
     }
-    
+
     ctx.save();
-    ctx.globalCompositeOperation = 'screen';
-    ctx.drawImage(glowCanvas, centerX - glowWidth / 2, centerY - glowHeight / 2);
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.drawImage(glowCanvas, -glowPadding, -glowPadding);
     ctx.restore();
 
-    // 3. DRAW CARD
-    const cardRadius = 24;
+    // [3] Draw card background & border
+    // backdrop-filter: saturate(160%) by re-drawing the card region through a filter
     ctx.save();
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
-    ctx.shadowBlur = 40;
-    ctx.shadowOffsetY = 20;
     ctx.beginPath();
     ctx.roundRect(cardX, cardY, cardWidth, cardHeight, cardRadius);
+    ctx.clip();
+    const saturateCanvas = document.createElement('canvas');
+    saturateCanvas.width = targetWidth;
+    saturateCanvas.height = targetHeight;
+    const sCtx2 = saturateCanvas.getContext('2d');
+    sCtx2.drawImage(canvas, 0, 0);
+    ctx.filter = 'saturate(160%)';
+    ctx.drawImage(saturateCanvas, 0, 0);
+    ctx.filter = 'none';
+    // Card fill
     ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
-    ctx.fill();
-    ctx.shadowColor = 'transparent';
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.lineWidth = 2;
+    ctx.fillRect(cardX, cardY, cardWidth, cardHeight);
+    ctx.restore();
+    // Card border
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardWidth, cardHeight, cardRadius);
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.16)';
+    ctx.lineWidth = 1.6;
     ctx.stroke();
     ctx.restore();
 
-    // 4. DRAW REPO ICON
-    const innerPadding = 40;
-    let iconSize = isProminent ? 180 : 80;
-    let iconX, iconY;
+    // [4] LAYOUT CONSTANTS; mirrors CSS grid: gap: 20px 60px, padding: 60px
+    const colGap = 60;
+    const rowGap = 40;
 
-    if (isProminent) {
-      iconX = cardX + cardWidth - innerPadding - iconSize;
-      iconY = cardY + (cardHeight - iconSize) / 2;
-    } else {
-      iconX = cardX + cardWidth - innerPadding - iconSize;
-      iconY = cardY + innerPadding;
-    }
+    const nameFontSize = 84;
+    const nameLineHeight = nameFontSize * 1.1;
+    const nameMaxLines = 2;
 
+    const descFontSize = 30;
+    const descLineHeight = descFontSize * 1.5;
+    const descMaxLines = 3;
+
+    // In CSS the desc spans both columns ("desc desc"), so its text width is the full inner width.
+    // The name area width is 1fr = inner width - colGap - iconColumn width.
+    const innerWidth = cardWidth - innerPadding * 2;   // 1000px
+    const innerHeight = cardHeight - innerPadding * 2; // 360px
+
+    // [5] Pre-measure desc to determine how many lines it takes, which sizes the icon row
+    ctx.font = `300 ${descFontSize}px "Lexend", sans-serif`;
+    ctx.letterSpacing = `${descFontSize * 0.02}px`;
+    const descLines = splitLines(ctx, repoDesc, innerWidth, descMaxLines);
+    const descBlockHeight = descLines.length * descLineHeight;
+
+    // Icon fills the 1fr row: inner height minus row gap and desc block
+    const iconSize = innerHeight - rowGap - descBlockHeight;
+    const iconX = cardX + cardWidth - innerPadding - iconSize;
+    const iconY = cardY + innerPadding;
+
+    // Name text column = 1fr = inner width minus column gap and icon column
+    const nameTextWidth = innerWidth - colGap - iconSize;
+
+    // Name is align-self: center within the icon row
+    ctx.font = `700 ${nameFontSize}px "Lexend", sans-serif`;
+    ctx.letterSpacing = `${-nameFontSize * 0.02}px`;
+    const nameLines = splitLines(ctx, repoName, nameTextWidth, nameMaxLines);
+    const nameBlockHeight = nameLines.length * nameLineHeight;
+    const nameY = iconY + (iconSize - nameBlockHeight) / 2;
+
+    // Desc starts after the icon row + row gap
+    const descY = iconY + iconSize + rowGap;
+    const nameX = cardX + innerPadding;
+    const descX = cardX + innerPadding;
+
+    // [6] Draw repo icon
     if (repoIconData) {
       const iconImg = new Image();
-      if (repoIconData.startsWith('http')) {
-        iconImg.crossOrigin = 'anonymous';
-      }
-      
+      if (!repoIconData.startsWith('data:')) iconImg.crossOrigin = 'anonymous';
+
       await new Promise((resolve, reject) => {
         iconImg.onload = resolve;
         iconImg.onerror = reject;
@@ -113,16 +214,11 @@ async function exportBanner(accentColor, repoIconData, repoName, repoDesc, shoul
       });
 
       const iAspect = iconImg.naturalWidth / iconImg.naturalHeight;
-      let iW, iH, iX, iY;
-      if (iAspect > 1) {
-        iW = iconSize;
-        iH = iconSize / iAspect;
-      } else {
-        iH = iconSize;
-        iW = iconSize * iAspect;
-      }
-      iX = iconX + (iconSize - iW) / 2;
-      iY = iconY + (iconSize - iH) / 2;
+      let iW, iH;
+      if (iAspect > 1) { iW = iconSize; iH = iconSize / iAspect; }
+      else              { iH = iconSize; iW = iconSize * iAspect; }
+      const iX = iconX + (iconSize - iW) / 2;
+      const iY = iconY + (iconSize - iH) / 2;
 
       if (shouldTintIcon) {
         const scratch = document.createElement('canvas');
@@ -139,71 +235,28 @@ async function exportBanner(accentColor, repoIconData, repoName, repoDesc, shoul
       }
     }
 
-    // 5. DRAW REPO NAME
-    ctx.fillStyle = '#FFFFFF';
-    const nameFontSize = isProminent ? 44 : 56; // SLIGHTLY ADJUSTED FOR NEW MARGINS
-    ctx.font = `bold ${nameFontSize}px "Interstate", sans-serif`;
+    // [7] Draw repo name
+    ctx.fillStyle = '#fff';
+    ctx.font = `700 ${nameFontSize}px "Lexend", sans-serif`;
+    ctx.letterSpacing = `${-nameFontSize * 0.02}px`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
+    wrapAndTruncate(ctx, repoName, nameX, nameY, nameTextWidth, nameLineHeight, nameMaxLines);
 
-    const nameX = cardX + innerPadding;
-    const nameY = isProminent ? cardY + cardHeight / 2 - 50 : cardY + innerPadding;
-    
-    // WORD WRAP HELPER WITH LIMIT
-    const wrapAndTruncate = (context, text, x, y, maxWidth, lineHeight, maxLines, drawFromBottom) => {
-      const words = text.split(' ');
-      let line = '';
-      const lines = [];
-
-      for (let n = 0; n < words.length; n++) {
-        const testLine = line + words[n] + ' ';
-        const metrics = context.measureText(testLine);
-        if (metrics.width > maxWidth && n > 0) {
-          lines.push(line);
-          line = words[n] + ' ';
-        } else {
-          line = testLine;
-        }
-      }
-      lines.push(line);
-
-      const displayLines = lines.slice(0, maxLines);
-      if (lines.length > maxLines) {
-        let last = displayLines[maxLines - 1];
-        displayLines[maxLines - 1] = last.trim().substring(0, last.length - 4) + '...';
-      }
-
-      if (drawFromBottom) {
-        for (let k = displayLines.length - 1; k >= 0; k--) {
-          context.fillText(displayLines[k], x, y - (displayLines.length - 1 - k) * lineHeight);
-        }
-      } else {
-        for (let k = 0; k < displayLines.length; k++) {
-          context.fillText(displayLines[k], x, y + k * lineHeight);
-        }
-      }
-    };
-
-    const maxNameWidth = isProminent ? cardWidth - innerPadding * 2 - iconSize - 40 : cardWidth - innerPadding * 2 - iconSize - 20;
-    wrapAndTruncate(ctx, repoName, nameX, nameY, maxNameWidth, nameFontSize * 1.1, isProminent ? 3 : 2, false);
-
-    // 6. DRAW DESCRIPTION
+    // [8] Draw description (spans full inner width; same as CSS "desc desc" grid area)
     ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    const descFontSize = isProminent ? 18 : 20;
-    ctx.font = `${descFontSize}px "Interstate", sans-serif`;
-    const descX = cardX + innerPadding;
-    const descY = isProminent ? nameY + (3 * nameFontSize * 1.1) + 20 : cardY + cardHeight - innerPadding;
-    ctx.textBaseline = isProminent ? 'top' : 'bottom';
+    ctx.font = `300 ${descFontSize}px "Lexend", sans-serif`;
+    ctx.letterSpacing = `${descFontSize * 0.02}px`;
+    ctx.textBaseline = 'top';
+    wrapAndTruncate(ctx, repoDesc, descX, descY, innerWidth, descLineHeight, descMaxLines);
+    ctx.letterSpacing = '0px';
 
-    const maxDescWidth = isProminent ? cardWidth * 0.55 : cardWidth - (innerPadding * 2);
-    wrapAndTruncate(ctx, repoDesc, descX, descY, maxDescWidth, descFontSize * 1.4, isProminent ? 5 : 3, !isProminent);
-
-    // DOWNLOAD IMAGE
+    // Download image
     canvas.toBlob((blob) => {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const slug = repoName.toLowerCase().replace(/[^a-z0-9]/g, '-');
+      const slug = fileSlug ?? repoName.toLowerCase().replace(/[^a-z0-9]/g, '-');
       a.download = `repo-card-${slug}.png`;
       document.body.appendChild(a);
       a.click();
@@ -212,9 +265,9 @@ async function exportBanner(accentColor, repoIconData, repoName, repoDesc, shoul
     }, 'image/png');
 
   } catch (error) {
-    console.error('Error exporting banner:', error);
+    console.error('Error exporting repo card:', error);
     alert('Failed to export image. Please try again.');
   }
 }
 
-window.exportBanner = exportBanner;
+window.exportRepoCard = exportRepoCard;
